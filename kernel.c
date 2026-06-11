@@ -36,13 +36,31 @@ static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
 	return fg | bg << 4;
 }
 
+// hide hardware cursor
+static inline void outb(uint16_t port, uint8_t val) {
+    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
+}
+void disable_hardware_cursor() {
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, 0x20);
+}
+
 size_t row, col;
-uint8_t color = vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_WHITE);
+uint8_t color;
 
 void put(char c) {
-	if (c == '\n') { col = 0; if (++row == VGA_HEIGHT) row = 0; return; }
+	if (c == '\n'){ 
+		col = 0; 
+		if (++row == VGA_HEIGHT) 
+			row = 0; 
+		return; 
+	}
 	VGA[row * VGA_WIDTH + col] = (uint16_t) c | (uint16_t) color << 8;
-	if (++col == VGA_WIDTH) { col = 0; if (++row == VGA_HEIGHT) row = 0; }
+	if (++col == VGA_WIDTH){ 
+		col = 0; 
+		if (++row == VGA_HEIGHT) 
+			row = 0; 
+	}
 }
 
 void write(const char* s) {
@@ -50,7 +68,10 @@ void write(const char* s) {
 }
 
 void kernel_main(void) {
-	for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) VGA[i] = (uint16_t) ' ' | (uint16_t) color << 8;
+	color = vga_entry_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
+	disable_hardware_cursor(); 
+	for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) 
+		VGA[i] = (uint16_t) ' ' | (uint16_t) color << 8;
 	row = col = 0;
 	write("Hello, World!\n");
 	write("Welcome to my OS.\n");
